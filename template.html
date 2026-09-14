@@ -358,6 +358,21 @@ body,.card,.sidebar,.header,.kpi,.input,.tablewrap{transition:background-color v
 .line-svg .dot{fill:var(--card);stroke:var(--primary);stroke-width:2.5}
 .line-svg .hover{transition:opacity var(--d-fast) var(--ease-out)}
 .line-svg .cap{cursor:crosshair}
+/* tela cheia */
+.chart-card,.tablewrap{position:relative}
+.fs-btn{position:absolute;top:8px;right:8px;width:22px;height:22px;border:0;background:transparent;color:var(--muted-foreground);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.55;z-index:2;transition:opacity var(--d-fast) var(--ease-out),background-color var(--d-fast) var(--ease-out),color var(--d-fast) var(--ease-out)}
+.fs-btn:hover{opacity:1;background:var(--muted);color:var(--foreground)}
+.fs-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.chart-card>.chead{padding-right:26px}
+.fs-on{position:fixed!important;inset:14px!important;z-index:150;overflow:auto;padding:24px 28px!important;box-shadow:0 30px 80px rgba(0,0,0,.35)!important;max-height:none!important;display:flex;flex-direction:column}
+.fs-on>.chead{flex:none}
+.fs-on .cfunnel,.fs-on .line-svg,.fs-on .bars-svg{max-height:calc(100vh - 140px);margin:0 auto}
+.fs-on #map{flex:1;min-height:0;height:auto!important}
+.fs-on .fwrap{flex:1;align-items:center}
+.fs-backdrop{position:fixed;inset:0;z-index:149;background:var(--overlay,oklch(0.22 0.04 250 / .42));opacity:0;pointer-events:none;transition:opacity var(--d-base) var(--ease-out)}
+.fs-backdrop.show{opacity:1;pointer-events:auto}
+.fs-on .fs-btn{top:12px;right:12px}
+.fs-on .fs-btn .ic-open{display:none}.fs-btn .ic-close{display:none}.fs-on .fs-btn .ic-close{display:block}
 /* table */
 .tablewrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow-card)}
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -606,6 +621,7 @@ td.dim{color:var(--muted-foreground)}
   </div>
 </div>
 <div id="progress" role="progressbar" aria-hidden="true"></div>
+<div class="fs-backdrop" id="fs-backdrop"></div>
 <div class="chart-tip" id="tip" role="tooltip"></div>
 <div class="rf-toast" id="rf-toast" role="status" aria-live="polite"></div>
 
@@ -916,6 +932,9 @@ function mapInit(){
   tiles.on("loading",()=>{$("map-note").textContent="Carregando mapa…"});
   setTimeout(()=>{$("map").classList.remove("loading");if($("map-note").textContent)$("map-note").textContent="Mapa sem conexão com o OpenStreetMap — só as bolhas são exibidas."},6000);
   mapLayer=L.layerGroup().addTo(map);
+  const fix=()=>{try{map.invalidateSize({animate:false})}catch(e){}};
+  setTimeout(fix,60);setTimeout(fix,400);setTimeout(fix,1200);window.addEventListener("resize",fix);
+  if("ResizeObserver" in window)new ResizeObserver(fix).observe($("map"));
   map.on("zoomend",()=>{if(mapLevel==="auto")mapDraw()});
   document.querySelectorAll("#map-level button").forEach(b=>b.onclick=()=>{mapLevel=b.dataset.lvl;document.querySelectorAll("#map-level button").forEach(x=>x.setAttribute("aria-pressed",x===b));mapDraw()});
 }
@@ -942,11 +961,23 @@ function mapDraw(rows){
   $("map-sub").textContent=`Nível: ${lvl} · ${fmt(located)} localizados${unloc?` · ${fmt(unloc)} sem localização`:""}`;
 }
 (function(){const target=$("map");if(!("IntersectionObserver" in window)){mapInit();mapDraw(ROWS);return}
-  const go=()=>{if(map)return;io.disconnect();window.removeEventListener("scroll",go);mapInit();mapDraw(mapRows)};
+  const go=()=>{if(map)return;if($("view-geral").classList.contains("is-loading")){setTimeout(go,200);return}io.disconnect();mapInit();mapDraw(mapRows)};
   const io=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting))go()},{rootMargin:"200px"});io.observe(target);
-  window.addEventListener("scroll",()=>{const r=target.getBoundingClientRect();if(r.top<innerHeight+200&&r.bottom>-200)go()},{passive:true})})();
+  window.addEventListener("scroll",()=>{const r=target.getBoundingClientRect();if(r.top<innerHeight+200&&r.bottom>-200)go()},{passive:true});setTimeout(go,4000)})();
 
 
+
+/* ---- tela cheia por card ---- */
+(function(){
+  const bd=$("fs-backdrop");let cur=null;
+  const ICO='<svg class="ic-open" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><svg class="ic-close" viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+  function close(){if(!cur)return;cur.classList.remove("fs-on");bd.classList.remove("show");document.body.style.overflow="";cur=null;if(typeof map!=="undefined"&&map)setTimeout(()=>map.invalidateSize(),80)}
+  function open(el){if(cur)close();cur=el;el.classList.add("fs-on");bd.classList.add("show");document.body.style.overflow="hidden";if(typeof map!=="undefined"&&map&&el.contains($("map")))setTimeout(()=>map.invalidateSize(),80)}
+  document.querySelectorAll(".chart-card, .tablewrap").forEach(el=>{if(el.closest(".chart-card")!==el&&el.closest(".chart-card"))return;if(el.querySelector(":scope>.fs-btn"))return;
+    const b=document.createElement("button");b.className="fs-btn";b.type="button";b.title="Tela cheia";b.setAttribute("aria-label","Tela cheia");b.innerHTML=ICO;
+    b.onclick=()=>el.classList.contains("fs-on")?close():open(el);el.appendChild(b)});
+  bd.onclick=close;document.addEventListener("keydown",e=>{if(e.key==="Escape")close()});
+})();
 /* ---- sair ---- */
 $("logout-btn").onclick=()=>{try{sessionStorage.clear()}catch(e){}if(window.__STATIC__){location.reload()}else if(/^https?:$/.test(location.protocol)){location.href="/logout"}else{location.reload()}};
 /* ---- tema ---- */
