@@ -1,7 +1,6 @@
 import json, datetime, os
 try: LU=datetime.datetime.fromisoformat(open("last_update.txt").read().strip())
 except Exception: LU=datetime.datetime.now()
-rows=open("rows.json",encoding="utf-8").read()
 d=json.load(open("curriculos.json",encoding="utf-8"))["items"]
 ds=sorted(i["criadoEm"][:10] for i in d)
 br=lambda s:f"{s[8:10]}/{s[5:7]}/{s[:4]}"
