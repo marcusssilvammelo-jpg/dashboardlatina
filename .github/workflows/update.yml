@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PYTHONIOENCODING: utf-8
+      TZ: America/Sao_Paulo
       BITRIX24_WEBHOOK_URL: ${{ secrets.BITRIX24_WEBHOOK_URL }}
       DASH_USER: ${{ secrets.DASH_USER }}
       DASH_PASSWORD: ${{ secrets.DASH_PASSWORD }}
