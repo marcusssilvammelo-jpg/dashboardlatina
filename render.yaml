@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: latina-dashboard
+    runtime: docker
+    plan: free
+    envVars:
+      - key: BITRIX24_WEBHOOK_URL
+        sync: false
+      - key: DASH_USER
+        sync: false
+      - key: DASH_PASSWORD
+        sync: false
+      - key: COOKIE_SECURE
+        value: "1"

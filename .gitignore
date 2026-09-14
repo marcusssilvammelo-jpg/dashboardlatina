@@ -1,0 +1,16 @@
+# segredos
+.env
+auth.json
+# dados extraídos (gerados no Actions; nunca versionar — contêm dados pessoais)
+*.json
+!geocache.json
+*.txt
+controle-curriculos.html
+login.html
+site/
+# local
+__pycache__/
+*.log
+*.err
+patch_*.py
+dmp/

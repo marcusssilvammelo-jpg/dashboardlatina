@@ -1,0 +1,6 @@
+FROM python:3.12-slim
+WORKDIR /app
+COPY . .
+ENV PYTHONIOENCODING=utf-8 PORT=8765 HOST=0.0.0.0
+EXPOSE 8765
+CMD ["python", "serve.py"]
