@@ -373,6 +373,40 @@ body,.card,.sidebar,.header,.kpi,.input,.tablewrap{transition:background-color v
 .fs-backdrop.show{opacity:1;pointer-events:auto}
 .fs-on .fs-btn{top:12px;right:12px}
 .fs-on .fs-btn .ic-open{display:none}.fs-btn .ic-close{display:none}.fs-on .fs-btn .ic-close{display:block}
+/* ficha do candidato */
+.drawer-bd{position:fixed;inset:0;z-index:160;background:oklch(0.22 0.04 250 / .42);opacity:0;pointer-events:none;transition:opacity var(--d-base) var(--ease-out)}
+.drawer-bd.show{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);z-index:161;background:var(--card);border-left:1px solid var(--border);display:flex;flex-direction:column;transform:translateX(100%);transition:transform 220ms var(--ease-out)}
+.drawer.open{transform:none}
+.drawer[hidden]{display:none}
+.dw-head{display:flex;align-items:flex-start;gap:12px;padding:18px 20px 14px;border-bottom:1px solid var(--border)}
+.dw-head h2{margin:0;font-size:18px;font-weight:800;letter-spacing:-.02em;line-height:1.25}
+.dw-head .sub{font-size:12.5px;color:var(--muted-foreground);margin-top:3px}
+.dw-body{padding:18px 20px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
+.dw-sec>h3{margin:0 0 10px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-foreground)}
+.dl{display:grid;grid-template-columns:132px 1fr;gap:9px 14px;font-size:13px}
+.dl dt{color:var(--muted-foreground);font-weight:600}
+.dl dd{margin:0;font-weight:600;word-break:break-word}
+.dl dd.empty{color:var(--muted-foreground);font-weight:500}
+.dw-foot{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap}
+.gauge{height:6px;border-radius:999px;background:var(--muted);overflow:hidden;margin-top:6px}
+.gauge>i{display:block;height:100%;border-radius:999px;background:var(--primary);transition:width var(--d-data) var(--ease-out)}
+.chip.Alto{background:var(--success-bg);color:var(--success)}
+.chip.Médio{background:var(--warning-bg);color:var(--warning)}
+.chip.Baixo{background:var(--muted);color:var(--muted-foreground)}
+.tl{display:flex;flex-direction:column;gap:0;font-size:12.5px}
+.tl-item{display:grid;grid-template-columns:14px 1fr;gap:10px;padding:0 0 14px;position:relative}
+.tl-item:last-child{padding-bottom:0}
+.tl-item::before{content:"";position:absolute;left:6px;top:14px;bottom:0;width:1px;background:var(--border)}
+.tl-item:last-child::before{display:none}
+.tl-dot{width:9px;height:9px;border-radius:999px;background:var(--primary);margin-top:4px;justify-self:center}
+.tl-dot.etapa{background:var(--st3)}.tl-dot.at{background:var(--muted-foreground)}
+.tl-txt{font-weight:600;line-height:1.35}
+.tl-meta{color:var(--muted-foreground);font-size:11.5px;margin-top:2px;font-weight:500}
+table.tal tbody tr{cursor:pointer}
+table.tal tbody tr[aria-selected="true"]{background:var(--accent)}
+table.tal .lk{position:relative;z-index:1}
+@media (max-width:640px){.drawer{width:100%}.dl{grid-template-columns:1fr;gap:2px 0}.dl dt{margin-top:8px}}
 /* table */
 .tablewrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow-card)}
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -614,7 +648,7 @@ td.dim{color:var(--muted-foreground)}
         <thead><tr><th>Nome</th><th>Estado</th><th>Cidade</th><th>Bairro</th><th>Nascimento</th><th>Área de interesse</th><th>Currículo</th></tr></thead>
         <tbody></tbody>
       </table></div>
-      <p class="foot-note">"Baixar PDF" abre o arquivo anexado ao cartão e exige estar logado no Bitrix24. "Cartão" abre o registro no CRM.</p>
+      <p class="foot-note">Clique numa linha para ver a ficha completa do candidato. "Baixar PDF" abre o arquivo anexado ao cartão e exige estar logado no Bitrix24.</p>
       </section>
 
     </main>
@@ -622,6 +656,8 @@ td.dim{color:var(--muted-foreground)}
 </div>
 <div id="progress" role="progressbar" aria-hidden="true"></div>
 <div class="fs-backdrop" id="fs-backdrop"></div>
+<div class="drawer-bd" id="dw-bd"></div>
+<aside class="drawer" id="dw" hidden aria-labelledby="dw-name" role="dialog" aria-modal="true"></aside>
 <div class="chart-tip" id="tip" role="tooltip"></div>
 <div class="rf-toast" id="rf-toast" role="status" aria-live="polite"></div>
 
@@ -837,7 +873,7 @@ function renderTal(){
   const list=TAL.filter(t=>(!q||norm(t.nome).includes(q))&&(!fi||t.filial===fi)&&(!rp||t.responsavel===rp)&&(!ar||t.area.includes(ar))
     &&(!d1||(t.nascimento&&t.nascimento>=d1))&&(!d2||(t.nascimento&&t.nascimento<=d2)));
   $("f-n").textContent=list.length; $("tal-count").textContent=`${TAL.length} no banco`;
-  $("tal-table").querySelector("tbody").innerHTML=list.length?list.map(t=>`<tr>
+  $("tal-table").querySelector("tbody").innerHTML=list.length?list.map(t=>`<tr data-id="${t.id}" tabindex="0" aria-selected="false" title="Ver ficha completa">
     <td class="nm">${t.nome}<div class="sub">${t.filial} · ${t.responsavel}</div></td>
     <td>${t.estado}</td><td>${t.cidade}</td><td>${t.bairro}</td><td>${br(t.nascimento)}</td>
     <td>${t.area.length?t.area.map(a=>`<span class="chip blue">${a}</span>`).join(""):'<span class="chip">Não informada</span>'}</td>
@@ -846,6 +882,77 @@ function renderTal(){
 }
 ["f-nome","f-filial","f-nasc1","f-nasc2","f-resp","f-area"].forEach(id=>$(id).oninput=renderTal);
 $("f-clear").onclick=()=>{["f-nome","f-filial","f-nasc1","f-nasc2","f-resp","f-area"].forEach(id=>$(id).value="");renderTal()};
+
+
+/* ---- ficha do candidato ---- */
+const TALID={};TAL.forEach(t=>TALID[t.id]=t);
+const dw=$("dw"),dwbd=$("dw-bd");
+const idade=d=>{if(!d)return null;const b=new Date(d),h=TODAY;let a=h.getFullYear()-b.getFullYear();const m=h.getMonth()-b.getMonth();if(m<0||(m===0&&h.getDate()<b.getDate()))a--;return a};
+const dt=t=>t?`${t.slice(8,10)}/${t.slice(5,7)}/${t.slice(0,4)}`:"—";
+const dth=t=>`${dt(t.slice(0,10))} · ${t.slice(11,16)}`;
+function row(l,v,cls){return `<dt>${l}</dt><dd class="${v?(cls||""):"empty"}">${v||"não informado"}</dd>`}
+function fichaHTML(t){
+  const a=idade(t.nascimento);
+  const areas=t.area.length?t.area.map(x=>`<span class="chip blue">${x}</span>`).join(" "):"";
+  const vagas=t.vagas.length?t.vagas.map(v=>`<a class="lk" href="${v.url}" target="_blank" rel="noopener">${v.titulo}</a>`).join("<br>"):"";
+  const ad=t.adequacao?String(t.adequacao).replace(/[^\d.,]/g,"").replace(",","."):null;
+  const adn=ad?Math.max(0,Math.min(100,parseFloat(ad))):null;
+  return `<div class="dw-head">
+      <div style="flex:1;min-width:0">
+        <h2 id="dw-name">${t.nome}</h2>
+        <div class="sub">${t.filial} · Banco de Talentos desde ${dt(t.desde)}</div>
+      </div>
+      ${t.faixa?`<span class="chip ${t.faixa}">${t.faixa}</span>`:""}
+      <button class="icon-btn" id="dw-close" aria-label="Fechar"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="dw-body">
+      <section class="dw-sec"><h3>Dados do candidato</h3><dl class="dl">
+        ${row("Nome",t.primeiro)}${row("Sobrenome",t.sobrenome==="—"?"":t.sobrenome)}
+        ${row("Data de nascimento",t.nascimento?`${dt(t.nascimento)}${a!=null?` <span style="color:var(--muted-foreground);font-weight:500">· ${a} anos</span>`:""}`:"")}
+        ${row("Cidade que reside",t.cidade==="Não informada"?"":t.cidade)}${row("Bairro que reside",t.bairro==="—"?"":t.bairro)}
+        ${row("Estado",t.estado==="Não informado"?"":t.estado)}
+        ${row("Ensino médio completo?",t.ensino==="Não informado"?"":t.ensino)}
+        ${row("Área de interesse",areas)}
+        ${row("E-mail",t.email==="—"?"":`<a class="lk" href="mailto:${t.email}">${t.email}</a>`)}
+        ${row("Telefone",t.telefone==="—"?"":t.telefone)}
+        ${row("Responsável",t.responsavel)}${row("Criado em",dt(t.criadoEm))}
+      </dl></section>
+      <section class="dw-sec"><h3>Indicação</h3><dl class="dl">
+        ${row("Vaga vinculada",vagas)}
+        ${row("Área indicada",t.areaIndicada)}
+        ${row("% de adequação",adn!=null?`${adn.toFixed(0).replace(".",",")}%<div class="gauge"><i style="width:${adn}%"></i></div>`:"")}
+        ${row("Faixa de indicação",t.faixa?`<span class="chip ${t.faixa}">${t.faixa}</span>`:"")}
+      </dl></section>
+      <section class="dw-sec"><h3>Histórico no Bitrix24 · ${t.hist.length} ${t.hist.length===1?"evento":"eventos"}</h3>
+        <div class="tl">${t.hist.slice().reverse().map(e=>`<div class="tl-item"><i class="tl-dot ${e.tipo==="Etapa"?"etapa":e.tipo==="Criação"?"":"at"}"></i>
+          <div><div class="tl-txt">${e.txt}</div><div class="tl-meta">${dth(e.t)} · ${e.tipo}${e.quem?` · ${e.quem}`:""}</div></div></div>`).join("")}</div>
+      </section>
+    </div>
+    <div class="dw-foot">
+      ${t.cv?`<a class="btn sm" href="${t.cv}" target="_blank" rel="noopener">Baixar currículo (PDF)</a>`:`<span class="chip">Sem currículo anexado</span>`}
+      <a class="btn sm" href="${t.card}" target="_blank" rel="noopener">Abrir no Bitrix24</a>
+    </div>`;
+}
+let dwLast=null;
+function openFicha(id){
+  const t=TALID[id];if(!t)return;
+  dw.innerHTML=fichaHTML(t);dw.hidden=false;dwbd.classList.add("show");document.body.style.overflow="hidden";
+  setTimeout(()=>dw.classList.add("open"),20);
+  $("dw-close").onclick=closeFicha;setTimeout(()=>$("dw-close").focus(),120);
+  document.querySelectorAll("#tal-table tbody tr").forEach(r=>r.setAttribute("aria-selected",String(+r.dataset.id===id)));
+  dwLast=id;
+}
+function closeFicha(){
+  if(dw.hidden)return;
+  dw.classList.remove("open");dwbd.classList.remove("show");document.body.style.overflow="";
+  document.querySelectorAll("#tal-table tbody tr").forEach(r=>r.setAttribute("aria-selected","false"));
+  setTimeout(()=>{dw.hidden=true;dw.innerHTML=""},REDUCED?0:220);
+  const r=document.querySelector(`#tal-table tbody tr[data-id="${dwLast}"]`);if(r)r.focus();
+}
+dwbd.onclick=closeFicha;
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeFicha()});
+$("tal-table").addEventListener("click",e=>{if(e.target.closest("a"))return;const tr=e.target.closest("tbody tr[data-id]");if(tr)openFicha(+tr.dataset.id)});
+$("tal-table").addEventListener("keydown",e=>{if(e.key!=="Enter"&&e.key!==" ")return;const tr=e.target.closest("tbody tr[data-id]");if(tr){e.preventDefault();openFicha(+tr.dataset.id)}});
 
 /* ---- funil de vagas ---- */
 const VROWS=VG.vagas; // [id,titulo,etapa,grupo,cliente,filial,aberta,fechada]
