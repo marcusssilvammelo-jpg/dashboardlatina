@@ -589,6 +589,7 @@ td.dim{color:var(--muted-foreground)}
           <div class="field fmini"><label for="v-d2">Abertura até</label><input class="input" id="v-d2" type="date"></div>
           <div class="field fmini grow"><label for="v-cli">Cliente</label><input class="input" id="v-cli" list="v-cli-list" placeholder="Todos os clientes"><datalist id="v-cli-list"></datalist></div>
           <div class="field fmini"><label for="v-fil">Filial</label><select class="input" id="v-fil"><option value="">Todas</option><option>SC</option><option>RJ</option><option>SP</option><option>Não informada</option></select></div>
+          <div class="field fmini grow"><label for="v-resp">Responsável</label><select class="input" id="v-resp"><option value="">Todos</option></select></div>
         </div>
         <div class="row ftags"><span class="fcount"><b id="v-n"></b> de <span id="v-total"></span> vagas</span><div class="spacer"></div><button class="btn sm" id="v-clear">Limpar filtros</button></div>
       </div>
@@ -960,10 +961,12 @@ const GCOL={Aberta:"--st2",Onboarding:"--warning",Fechada:"--success",Perdida:"-
 let vStage=null;
 $("sb-vagas").textContent=fmt(VROWS.length); $("v-total").textContent=fmt(VROWS.length);
 [...new Set(VROWS.map(v=>v[4]))].sort((a,b)=>a.localeCompare(b,"pt-BR")).forEach(c=>$("v-cli-list").insertAdjacentHTML("beforeend",`<option value="${c.replace(/"/g,"&quot;")}">`));
+(function(){const c={};VROWS.forEach(v=>c[v[8]]=(c[v[8]]||0)+1);
+  Object.keys(c).sort((a,b)=>c[b]-c[a]||a.localeCompare(b,"pt-BR")).forEach(r=>$("v-resp").insertAdjacentHTML("beforeend",`<option value="${r.replace(/"/g,"&quot;")}">${r} (${fmt(c[r])})</option>`))})();
 const days=(a,b)=>(new Date(b)-new Date(a))/864e5;
 function renderVagas(){
-  const q=norm($("v-nome").value.trim()),d1=$("v-d1").value,d2=$("v-d2").value,cli=norm($("v-cli").value.trim()),fil=$("v-fil").value;
-  const base=VROWS.filter(v=>(!q||norm(v[1]).includes(q))&&(!d1||v[6]>=d1)&&(!d2||v[6]<=d2)&&(!cli||norm(v[4]).includes(cli))&&(!fil||v[5]===fil));
+  const q=norm($("v-nome").value.trim()),d1=$("v-d1").value,d2=$("v-d2").value,cli=norm($("v-cli").value.trim()),fil=$("v-fil").value,rsp=$("v-resp").value;
+  const base=VROWS.filter(v=>(!q||norm(v[1]).includes(q))&&(!d1||v[6]>=d1)&&(!d2||v[6]<=d2)&&(!cli||norm(v[4]).includes(cli))&&(!fil||v[5]===fil)&&(!rsp||v[8]===rsp));
   const rows=vStage?base.filter(v=>v[2]===vStage):base;
   $("v-n").textContent=fmt(rows.length);
   $("v-stagechip").innerHTML=vStage?`<span class="chip x" id="v-clearstage">Etapa: ${vStage} ✕</span>`:"";
@@ -1007,7 +1010,7 @@ function renderVagas(){
   const sc={};VG.stages.forEach(([id,n])=>sc[n]=0);base.forEach(v=>sc[v[2]]=(sc[v[2]]||0)+1);
   const flow=VG.stages.filter(([,,gr])=>gr!=="Perdida");
   funnelSVG($("v-funnel"),flow.map(([id,n,gr])=>({name:n,n:sc[n]||0,color:GCOL[gr]||"--st-fail",group:gr})),base.length,vStage,f=>{vStage=vStage===f?null:f;renderVagas()});
-  const hv={};VG.stages.forEach(([,n])=>hv[n]=0);base.forEach(v=>v[8].forEach(st=>{if(st in hv)hv[st]++}));
+  const hv={};VG.stages.forEach(([,n])=>hv[n]=0);base.forEach(v=>v[9].forEach(st=>{if(st in hv)hv[st]++}));
   funnelSVG($("v-funnel2"),flow.map(([id,n,gr])=>({name:n,n:hv[n]||0,color:GCOL[gr]||"--st-fail",group:gr})),base.length,vStage,f=>{vStage=vStage===f?null:f;renderVagas()},true);
   const lostStages=VG.stages.filter(([,,gr])=>gr==="Perdida").map(([,n])=>n);const lost=lostStages.reduce((a,n)=>a+(sc[n]||0),0);const won=sc["Admitido"]+sc["Confirmação de Início"];
   $("v-lost").innerHTML=`<span class="k-label">Vagas perdidas<button class="info" type="button" data-info="Vagas em Desistiu, Vagas Não Entregues ou Cliente Declinou. A perda pode acontecer em qualquer etapa, por isso fica fora do funil. Percentual sobre o total de vagas do recorte e sobre as decididas (fechadas + perdidas)." aria-label="Como é calculado"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v6"/><circle cx="12" cy="7.6" r=".6" fill="currentColor"/></svg></button></span>
@@ -1026,8 +1029,8 @@ function renderVagas(){
     abc.map(([c,n,k,p],i)=>`<tr><td class="dim">${i+1}</td><td><span class="chip ${k}">${k}</span></td><td class="nm"><button class="cellbtn" data-abc="${c.replace(/"/g,"&quot;")}">${c}</button></td><td style="text-align:right">${fmt(n)}</td><td style="text-align:right">${pct(n,tot)}</td><td style="text-align:right" class="dim">${(p*100).toFixed(1).replace(".",",")}%</td></tr>`).join("")+"</tbody>";
   $("v-abc").querySelectorAll("[data-abc]").forEach(b=>b.onclick=()=>{$("v-cli").value=$("v-cli").value===b.dataset.abc?"":b.dataset.abc;renderVagas()});
 }
-["v-nome","v-d1","v-d2","v-cli","v-fil"].forEach(id=>$(id).oninput=renderVagas);
-$("v-clear").onclick=()=>{["v-nome","v-d1","v-d2","v-cli","v-fil"].forEach(id=>$(id).value="");vStage=null;renderVagas()};
+["v-nome","v-d1","v-d2","v-cli","v-fil","v-resp"].forEach(id=>$(id).oninput=renderVagas);
+$("v-clear").onclick=()=>{["v-nome","v-d1","v-d2","v-cli","v-fil","v-resp"].forEach(id=>$(id).value="");vStage=null;renderVagas()};
 
 /* ---- mapa ---- */
 var map=null,mapLayer=null,mapLevel="auto",mapRows=ROWS;

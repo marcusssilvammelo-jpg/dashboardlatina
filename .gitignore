@@ -4,6 +4,7 @@ auth.json
 # dados extraídos (gerados no Actions; nunca versionar — contêm dados pessoais)
 *.json
 !geocache.json
+!user_names.json
 *.txt
 controle-curriculos.html
 login.html

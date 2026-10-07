@@ -26,8 +26,8 @@ def paged(method, params):
             return out
         start = b["next"]
 
-sel = ["ID", "TITLE", "STAGE_ID", "DATE_CREATE", "CLOSEDATE", "COMPANY_ID", "MOVED_TIME",
-       "UF_CRM_1756813479", "UF_CRM_1756813447", "UF_CRM_1727616025104", "UF_CRM_1756315926384"]
+sel = ["ID", "TITLE", "STAGE_ID", "DATE_CREATE", "CLOSEDATE", "COMPANY_ID", "MOVED_TIME", "ASSIGNED_BY_ID",
+       "UF_CRM_1756753322", "UF_CRM_1756753158", "UF_CRM_1756813479", "UF_CRM_1756813447", "UF_CRM_1727616025104", "UF_CRM_1756315926384"]
 deals = paged("crm.deal.list", flat({"filter": {"CATEGORY_ID": CAT}, "select": sel}))
 ids = sorted({int(d["COMPANY_ID"]) for d in deals if d.get("COMPANY_ID") and d["COMPANY_ID"] != "0"})
 comp = {}
@@ -40,6 +40,26 @@ def filial(c):
     if e: return FILIAL[e]
     return UF_MAP.get((c.get("UF_CRM_1731951962073") or "").strip().lower(), "Não informada")
 
+# nomes de usuários: cache versionado + enriquecimento a partir dos campos "Nome [id]"
+# do próprio funil e, se o webhook tiver escopo "user", de user.get.
+try: UNAMES = json.load(open("user_names.json", encoding="utf-8"))
+except FileNotFoundError: UNAMES = {}
+for d in deals:
+    for k in ("UF_CRM_1756753322", "UF_CRM_1756753158"):
+        m = re.match(r"^(.*?)\s*\[(\d+)\]$", str(d.get(k) or "").strip())
+        if m and m.group(2) not in UNAMES: UNAMES[m.group(2)] = m.group(1).strip()
+falta = sorted({str(d.get("ASSIGNED_BY_ID")) for d in deals if str(d.get("ASSIGNED_BY_ID") or "") not in UNAMES} - {"", "None"})
+if falta:
+    try:  # exige permissão "user" no webhook; sem ela, segue com o cache
+        for k in range(0, len(falta), 50):
+            for u in call("user.get", flat({"ID": falta[k:k+50]}))["result"]:
+                nome = " ".join(x for x in [u.get("NAME"), u.get("LAST_NAME")] if x).strip()
+                if nome: UNAMES[str(u["ID"])] = nome
+    except Exception: pass
+json.dump(UNAMES, open("user_names.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1, sort_keys=True)
+def resp(d):
+    i = str(d.get("ASSIGNED_BY_ID") or "")
+    return UNAMES.get(i) or (f"Usuário #{i}" if i else "Sem responsável")
 def d10(s): return (s or "")[:10] or None
 out = []
 for d in deals:
@@ -50,8 +70,8 @@ for d in deals:
     out.append([
         int(d["ID"]), re.sub(r"\s+", " ", d["TITLE"]).strip(), STAGE.get(d["STAGE_ID"], d["STAGE_ID"]), grupo,
         (c.get("TITLE") or "Sem cliente").strip(), filial(c) if c else "Não informada",
-        aberta, fim if grupo == "Fechada" else None,
+        aberta, fim if grupo == "Fechada" else None, resp(d),
     ])
 json.dump({"stages": [[s["STATUS_ID"], s["NAME"], GRUPO.get(s["STATUS_ID"], "Outra")] for s in stages], "vagas": out},
           open("vagas.json", "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
-print(len(out), "vagas;", len(comp), "clientes")
+print(len(out), "vagas;", len(comp), "clientes;", len(UNAMES), "usuários nomeados")
